@@ -294,6 +294,13 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 		udelay(1000);
 	}
 
+	/* Some eMMC cards failes to initialize when we issue CMD8 or
+		CMD55 before the end of mmc_start_init function */
+	if ((host->quirks & SDHCI_QUIRK_EMMC_INIT) && (!mmc->has_init && !mmc->init_in_progress)){
+		if ((cmd->cmdidx == SD_CMD_SEND_IF_COND) || (cmd->cmdidx == MMC_CMD_APP_CMD))
+			return -ETIMEDOUT;
+	}
+
 	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
 
 	mask = SDHCI_INT_RESPONSE;
@@ -830,7 +837,7 @@ int sdhci_setup_cfg(struct mmc_config *cfg, struct sdhci_host *host,
 	if (host->quirks & SDHCI_QUIRK_BROKEN_VOLTAGE)
 		cfg->voltages |= host->voltages;
 
-	cfg->host_caps |= MMC_MODE_HS | MMC_MODE_HS_52MHz | MMC_MODE_4BIT;
+	cfg->host_caps |= MMC_MODE_HS | MMC_MODE_HS_52MHz | MMC_MODE_8BIT | MMC_MODE_4BIT;
 
 	/* Since Host Controller Version3.0 */
 	if (SDHCI_GET_VERSION(host) >= SDHCI_SPEC_300) {

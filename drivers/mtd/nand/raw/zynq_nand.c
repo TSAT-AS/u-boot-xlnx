@@ -1026,6 +1026,10 @@ static void zynq_nand_write_buf(struct mtd_info *mtd, const u8 *buf, int len)
 	}
 }
 
+#if defined(ENCLUSTRA_MARS_ZX) || defined(ENCLUSTRA_MERCURY_ZX)
+extern void zx_set_storage (int store);
+#endif
+
 /*
  * zynq_nand_device_ready - Check device ready/busy line
  * @mtd:	Pointer to the mtd_info structure
@@ -1045,6 +1049,9 @@ static int zynq_nand_device_ready(struct mtd_info *mtd)
 		writel(ZYNQ_MEMC_SR_INT_ST1, &smc->reg->cfr);
 		return 1;
 	}
+#if defined (ENCLUSTRA_MARS_ZX) || defined(ENCLUSTRA_MERCURY_ZX)
+        zx_set_storage(ZX_NAND);
+#endif
 
 	return 0;
 }
@@ -1201,7 +1208,7 @@ static int zynq_nand_probe(struct udevice *dev)
 		nand_chip->ecc.bytes = 0;
 
 		/* NAND with on-die ECC supports subpage reads */
-		nand_chip->options |= NAND_SUBPAGE_READ;
+		nand_chip->options |= NAND_SUBPAGE_READ |  NAND_NO_SUBPAGE_WRITE;
 
 		/* On-Die ECC spare bytes offset 8 is used for ECC codes */
 		if (ondie_ecc_enabled) {

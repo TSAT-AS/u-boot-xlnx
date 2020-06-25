@@ -292,6 +292,10 @@ static int zynq_qspi_child_pre_probe(struct udevice *bus)
 	return 0;
 }
 
+#if defined(ENCLUSTRA_MARS_ZX) || defined(ENCLUSTRA_MERCURY_ZX)
+extern void zx_set_storage(int store);
+#endif
+
 static int zynq_qspi_probe(struct udevice *bus)
 {
 	struct zynq_qspi_platdata *plat = dev_get_platdata(bus);
@@ -299,6 +303,10 @@ static int zynq_qspi_probe(struct udevice *bus)
 	struct clk clk;
 	unsigned long clock;
 	int ret;
+
+#if defined(ENCLUSTRA_MARS_ZX) || defined(ENCLUSTRA_MERCURY_ZX)
+	zx_set_storage(ZX_QSPI);
+#endif
 
 	priv->regs = plat->regs;
 	priv->fifo_depth = ZYNQ_QSPI_FIFO_DEPTH;

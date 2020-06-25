@@ -31,6 +31,8 @@ struct arasan_sdhci_clk_data {
 	int clk_phase_out[MMC_TIMING_MMC_HS400 + 1];
 };
 
+DECLARE_GLOBAL_DATA_PTR;
+
 struct arasan_sdhci_plat {
 	struct mmc_config cfg;
 	struct mmc mmc;
@@ -42,6 +44,8 @@ struct arasan_sdhci_priv {
 	u8 deviceid;
 	u8 bank;
 	u8 no_1p8;
+	u8 is_emmc;
+  struct gpio_desc *cd_gpio;
 };
 
 #if defined(CONFIG_ARCH_ZYNQMP) || defined(CONFIG_ARCH_VERSAL)
@@ -561,6 +565,15 @@ static int arasan_sdhci_probe(struct udevice *dev)
 
 	host = priv->host;
 
+	if(!(priv->cd_gpio)){
+		if (gpio_get_number(priv->cd_gpio) >= 0) {
+			if (dm_gpio_is_valid(priv->cd_gpio)) {
+				if(!dm_gpio_get_value(priv->cd_gpio))
+					return -ENXIO;
+			}
+		}
+        }
+
 	ret = clk_get_by_index(dev, 0, &clk);
 	if (ret < 0) {
 		dev_err(dev, "failed to get clock\n");
@@ -588,6 +601,10 @@ static int arasan_sdhci_probe(struct udevice *dev)
 	host->quirks |= SDHCI_QUIRK_BROKEN_HISPD_MODE;
 #endif
 
+	if (priv->is_emmc)
+		host->quirks |= SDHCI_QUIRK_EMMC_INIT;
+
+	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
 	if (priv->no_1p8)
 		host->quirks |= SDHCI_QUIRK_NO_1_8_V;
 
@@ -630,6 +647,12 @@ static int arasan_sdhci_ofdata_to_platdata(struct udevice *dev)
 	priv->host->ioaddr = (void *)dev_read_addr(dev);
 	if (IS_ERR(priv->host->ioaddr))
 		return PTR_ERR(priv->host->ioaddr);
+
+  if (fdt_get_property(gd->fdt_blob, dev_of_offset(dev), "is_emmc", NULL))
+         priv->is_emmc = 1;
+  else
+         priv->is_emmc = 0;
+  gpio_request_by_name(dev, "cd-gpios", 0, priv->cd_gpio, GPIOD_IS_IN);
 
 	priv->deviceid = dev_read_u32_default(dev, "xlnx,device_id", -1);
 	priv->bank = dev_read_u32_default(dev, "xlnx,mio_bank", -1);
