@@ -370,10 +370,7 @@ int dram_init(void)
 	if (env_flash) {
 		/* Calculate the size in megabytes */
 		flash_size = env_flash->size / 1024 / 1024;
-		if(!fpga.name)
-			setup_qspi_args(flash_size, zx_get_idcode_name());
-		else
-			setup_qspi_args(flash_size, fpga.name);
+		setup_qspi_args(flash_size, zx_get_idcode_name());
 	}
 #endif
 #endif
